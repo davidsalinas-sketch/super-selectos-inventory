@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Productos - Super Selectos</title>
+    
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- DataTables CSS -->
+    <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link th:href="@{/css/style.css}" href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary" th:replace="~{fragments/navbar :: navbar}"></nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid mt-4">
+        <!-- Page Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card border-left-primary shadow">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <h1 class="h3 mb-0 text-gray-800">
+                                    <i class="fas fa-box text-primary"></i>
+                                    Gestión de Productos
+                                </h1>
+                                <p class="mb-0 text-muted">Administra el inventario de productos</p>
+                            </div>
+                            <div sec:authorize="hasAnyRole('ADMIN', 'MANAGER')">
+                                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#productModal">
+                                    <i class="fas fa-plus"></i> Nuevo Producto
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters Card -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow">
+                    <div class="card-header">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-filter"></i> Filtros
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <form id="filterForm" class="row g-3">
+                            <div class="col-md-3">
+                                <label for="searchName" class="form-label">Buscar por nombre</label>
+                                <input type="text" class="form-control" id="searchName" placeholder="Nombre del producto">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="categoryFilter" class="form-label">Categoría</label>
+                                <select class="form-select" id="categoryFilter">
+                                    <option value="">Todas las categorías</option>
+                                    <option value="ELECTRONICA">Electrónica</option>
+                                    <option value="ROPA">Ropa</option>
+                                    <option value="HOGAR">Hogar</option>
+                                    <option value="DEPORTES">Deportes</option>
+                                    <option value="LIBROS">Libros</option>
+                                    <option value="OTROS">Otros</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="stockFilter" class="form-label">Estado Stock</label>
+                                <select class="form-select" id="stockFilter">
+                                    <option value="">Todos</option>
+                                    <option value="low">Stock bajo</option>
+                                    <option value="out">Sin stock</option>
+                                    <option value="normal">Stock normal</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="minPrice" class="form-label">Precio mín.</label>
+                                <input type="number" class="form-control" id="minPrice" placeholder="0.00" step="0.01">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="maxPrice" class="form-label">Precio máx.</label>
+                                <input type="number" class="form-control" id="maxPrice" placeholder="999.99" step="0.01">
+                            </div>
+                            <div class="col-md-1 d-flex align-items-end">
+                                <button type="button" class="btn btn-outline-secondary w-100" onclick="clearFilters()">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Products Table -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card shadow">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="m-0 font-weight-bold text-primary">
+                                <i class="fas fa-table"></i> Lista de Productos
+                            </h6>
+                            <div>
+                                <button class="btn btn-info btn-sm" onclick="exportPDF()">
+                                    <i class="fas fa-file-pdf"></i> Exportar PDF
+                                </button>
+                                <button class="btn btn-success btn-sm" onclick="exportExcel()">
+                                    <i class="fas fa-file-excel"></i> Exportar Excel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="productsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Código</th>
+                                        <th>Nombre</th>
+                                        <th>Categoría</th>
+                                        <th>Precio</th>
+                                        <th>Stock</th>
+                                        <th>Stock Mín.</th>
+                                        <th>Estado</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="productsTableBody">
+                                    <!-- Products will be loaded here via JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Loading Spinner -->
+                        <div id="loadingSpinner" class="text-center py-4">
+                            <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
+                            <p class="text-muted mt-2">Cargando productos...</p>
+                        </div>
+                        
+                        <!-- No Results -->
+                        <div id="noResults" class="text-center py-4 d-none">
+                            <i class="fas fa-search fa-2x text-muted"></i>
+                            <p class="text-muted mt-2">No se encontraron productos con los filtros aplicados</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Modal -->
+    <div class="modal fade" id="productModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="productModalTitle">
+                        <i class="fas fa-plus"></i> Nuevo Producto
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="productForm">
+                    <div class="modal-body">
+                        <input type="hidden" id="productId">
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="productCode" class="form-label">Código *</label>
+                                <input type="text" class="form-control" id="productCode" required>
+                                <div class="invalid-feedback">
+                                    Por favor ingrese un código válido.
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="productName" class="form-label">Nombre *</label>
+                                <input type="text" class="form-control" id="productName" required>
+                                <div class="invalid-feedback">
+                                    Por favor ingrese el nombre del producto.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="productCategory" class="form-label">Categoría *</label>
+                                <select class="form-select" id="productCategory" required>
+                                    <option value="">Seleccionar categoría</option>
+                                    <option value="ELECTRONICA">Electrónica</option>
+                                    <option value="ROPA">Ropa</option>
+                                    <option value="HOGAR">Hogar</option>
+                                    <option value="DEPORTES">Deportes</option>
+                                    <option value="LIBROS">Libros</option>
+                                    <option value="OTROS">Otros</option>
+                                </select>
+                                <div class="invalid-feedback">
+                                    Por favor seleccione una categoría.
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="productPrice" class="form-label">Precio *</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="productPrice" step="0.01" min="0" required>
+                                </div>
+                                <div class="invalid-feedback">
+                                    Por favor ingrese un precio válido.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="productStock" class="form-label">Stock Actual *</label>
+                                <input type="number" class="form-control" id="productStock" min="0" required>
+                                <div class="invalid-feedback">
+                                    Por favor ingrese el stock actual.
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="productMinStock" class="form-label">Stock Mínimo *</label>
+                                <input type="number" class="form-control" id="productMinStock" min="0" required>
+                                <div class="invalid-feedback">
+                                    Por favor ingrese el stock mínimo.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="productDescription" class="form-label">Descripción</label>
+                            <textarea class="form-control" id="productDescription" rows="3" placeholder="Descripción del producto (opcional)"></textarea>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="productDistributor" class="form-label">Distribuidor</label>
+                                <select class="form-select" id="productDistributor">
+                                    <option value="">Seleccionar distribuidor</option>
+                                    <!-- Distributors will be loaded via JavaScript -->
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="productBranch" class="form-label">Sucursal</label>
+                                <select class="form-select" id="productBranch">
+                                    <option value="">Seleccionar sucursal</option>
+                                    <!-- Branches will be loaded via JavaScript -->
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times"></i> Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-success" id="saveProductBtn">
+                            <i class="fas fa-save"></i> Guardar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-trash"></i> Confirmar Eliminación
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>¿Está seguro que desea eliminar el producto <strong id="deleteProductName"></strong>?</p>
+                    <p class="text-muted">Esta acción no se puede deshacer.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                        <i class="fas fa-trash"></i> Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    
+    <!-- Products JS -->
+    <script th:src="@{/js/products.js}"></script>
+    
+    <script>
+        // Global variables
+        let currentProductId = null;
+        let productsTable = null;
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeDataTable();
+            loadProducts();
+            loadDistributors();
+            loadBranches();
+            setupFormValidation();
+            setupEventListeners();
+        });
+
+        // Initialize DataTable
+        function initializeDataTable() {
+            productsTable = $('#productsTable').DataTable({
+                responsive: true,
+                pageLength: 25,
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
+                },
+                dom: 'rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+                columnDefs: [
+                    { targets: [7], orderable: false }
+                ]
+            });
+        }
+
+        // Load products
+        function loadProducts(filters = {}) {
+            document.getElementById('loadingSpinner').style.display = 'block';
+            document.getElementById('noResults').classList.add('d-none');
+            
+            let url = '/api/products';
+            const params = new URLSearchParams();
+            
+            if (filters.name) params.append('name', filters.name);
+            if (filters.category) params.append('category', filters.category);
+            if (filters.minPrice) params.append('minPrice', filters.minPrice);
+            if (filters.maxPrice) params.append('maxPrice', filters.maxPrice);
+            if (filters.stock) params.append('stock', filters.stock);
+            
+            if (params.toString()) {
+                url += '?' + params.toString();
+            }
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('loadingSpinner').style.display = 'none';
+                    
+                    if (data.content && data.content.length > 0) {
+                        displayProducts(data.content);
+                    } else {
+                        document.getElementById('noResults').classList.remove('d-none');
+                        productsTable.clear().draw();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading products:', error);
+                    document.getElementById('loadingSpinner').style.display = 'none';
+                    showAlert('Error al cargar productos', 'danger');
+                });
+        }
+
+        // Display products in table
+        function displayProducts(products) {
+            productsTable.clear();
+            
+            products.forEach(product => {
+                const stockBadge = getStockBadge(product.stock, product.minimumStock);
+                const actions = getActionButtons(product);
+                
+                productsTable.row.add([
+                    product.code,
+                    product.name,
+                    getCategoryLabel(product.category),
+                    `$${product.price.toFixed(2)}`,
+                    product.stock,
+                    product.minimumStock,
+                    stockBadge,
+                    actions
+                ]);
+            });
+            
+            productsTable.draw();
+        }
+
+        // Get stock badge
+        function getStockBadge(stock, minStock) {
+            if (stock === 0) {
+                return '<span class="badge bg-danger">Sin Stock</span>';
+            } else if (stock <= minStock) {
+                return '<span class="badge bg-warning">Stock Bajo</span>';
+            } else {
+                return '<span class="badge bg-success">Normal</span>';
+            }
+        }
+
+        // Get category label
+        function getCategoryLabel(category) {
+            const labels = {
+                'ELECTRONICA': 'Electrónica',
+                'ROPA': 'Ropa',
+                'HOGAR': 'Hogar',
+                'DEPORTES': 'Deportes',
+                'LIBROS': 'Libros',
+                'OTROS': 'Otros'
+            };
+            return labels[category] || category;
+        }
+
+        // Get action buttons
+        function getActionButtons(product) {
+            let buttons = `
+                <button class="btn btn-info btn-sm me-1" onclick="viewProduct(${product.id})" title="Ver">
+                    <i class="fas fa-eye"></i>
+                </button>`;
+            
+            // Check user permissions (this would be dynamic based on user role)
+            if (hasEditPermission()) {
+                buttons += `
+                    <button class="btn btn-warning btn-sm me-1" onclick="editProduct(${product.id})" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>`;
+            }
+            
+            if (hasDeletePermission()) {
+                buttons += `
+                    <button class="btn btn-danger btn-sm" onclick="deleteProduct(${product.id}, '${product.name}')" title="Eliminar">
+                        <i class="fas fa-trash"></i>
+                    </button>`;
+            }
+            
+            return buttons;
+        }
+
+        // Check permissions (placeholder - would be replaced with actual role checking)
+        function hasEditPermission() {
+            // This would check the user's role from Thymeleaf security context
+            return true; // Placeholder
+        }
+
+        function hasDeletePermission() {
+            // This would check the user's role from Thymeleaf security context
+            return true; // Placeholder
+        }
+
+        // Product CRUD operations
+        function editProduct(productId) {
+            fetch(`/api/products/${productId}`)
+                .then(response => response.json())
+                .then(product => {
+                    fillProductForm(product);
+                    document.getElementById('productModalTitle').innerHTML = '<i class="fas fa-edit"></i> Editar Producto';
+                    new bootstrap.Modal(document.getElementById('productModal')).show();
+                });
+        }
+
+        function viewProduct(productId) {
+            // Implement view product details
+            console.log('View product:', productId);
+        }
+
+        function deleteProduct(productId, productName) {
+            currentProductId = productId;
+            document.getElementById('deleteProductName').textContent = productName;
+            new bootstrap.Modal(document.getElementById('deleteModal')).show();
+        }
+
+        // Fill product form
+        function fillProductForm(product) {
+            document.getElementById('productId').value = product.id || '';
+            document.getElementById('productCode').value = product.code || '';
+            document.getElementById('productName').value = product.name || '';
+            document.getElementById('productCategory').value = product.category || '';
+            document.getElementById('productPrice').value = product.price || '';
+            document.getElementById('productStock').value = product.stock || '';
+            document.getElementById('productMinStock').value = product.minimumStock || '';
+            document.getElementById('productDescription').value = product.description || '';
+            document.getElementById('productDistributor').value = product.distributorId || '';
+            document.getElementById('productBranch').value = product.branchId || '';
+        }
+
+        // Clear form
+        function clearProductForm() {
+            document.getElementById('productForm').reset();
+            document.getElementById('productId').value = '';
+            document.getElementById('productModalTitle').innerHTML = '<i class="fas fa-plus"></i> Nuevo Producto';
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Form submission
+            document.getElementById('productForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                saveProduct();
+            });
+
+            // Delete confirmation
+            document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+                if (currentProductId) {
+                    confirmDelete();
+                }
+            });
+
+            // Filters
+            document.getElementById('searchName').addEventListener('input', applyFilters);
+            document.getElementById('categoryFilter').addEventListener('change', applyFilters);
+            document.getElementById('stockFilter').addEventListener('change', applyFilters);
+            document.getElementById('minPrice').addEventListener('input', applyFilters);
+            document.getElementById('maxPrice').addEventListener('input', applyFilters);
+
+            // Modal reset
+            document.getElementById('productModal').addEventListener('hidden.bs.modal', clearProductForm);
+        }
+
+        // Apply filters
+        function applyFilters() {
+            const filters = {
+                name: document.getElementById('searchName').value,
+                category: document.getElementById('categoryFilter').value,
+                stock: document.getElementById('stockFilter').value,
+                minPrice: document.getElementById('minPrice').value,
+                maxPrice: document.getElementById('maxPrice').value
+            };
+            
+            loadProducts(filters);
+        }
+
+        // Clear filters
+        function clearFilters() {
+            document.getElementById('filterForm').reset();
+            loadProducts();
+        }
+
+        // Save product
+        function saveProduct() {
+            const productId = document.getElementById('productId').value;
+            const isEdit = productId && productId !== '';
+            
+            const productData = {
+                code: document.getElementById('productCode').value,
+                name: document.getElementById('productName').value,
+                category: document.getElementById('productCategory').value,
+                price: parseFloat(document.getElementById('productPrice').value),
+                stock: parseInt(document.getElementById('productStock').value),
+                minimumStock: parseInt(document.getElementById('productMinStock').value),
+                description: document.getElementById('productDescription').value,
+                distributorId: document.getElementById('productDistributor').value || null,
+                branchId: document.getElementById('productBranch').value || null
+            };
+
+            const url = isEdit ? `/api/products/${productId}` : '/api/products';
+            const method = isEdit ? 'PUT' : 'POST';
+
+            fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(productData)
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                }
+                throw new Error('Error saving product');
+            })
+            .then(() => {
+                showAlert(isEdit ? 'Producto actualizado correctamente' : 'Producto creado correctamente', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('productModal')).hide();
+                loadProducts();
+            })
+            .catch(error => {
+                console.error('Error saving product:', error);
+                showAlert('Error al guardar producto', 'danger');
+            });
+        }
+
+        // Confirm delete
+        function confirmDelete() {
+            fetch(`/api/products/${currentProductId}`, {
+                method: 'DELETE'
+            })
+            .then(response => {
+                if (response.ok) {
+                    showAlert('Producto eliminado correctamente', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('deleteModal')).hide();
+                    loadProducts();
+                } else {
+                    throw new Error('Error deleting product');
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting product:', error);
+                showAlert('Error al eliminar producto', 'danger');
+            });
+        }
+
+        // Load distributors
+        function loadDistributors() {
+            fetch('/api/distributors')
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('productDistributor');
+                    select.innerHTML = '<option value="">Seleccionar distribuidor</option>';
+                    
+                    if (data.content) {
+                        data.content.forEach(distributor => {
+                            const option = document.createElement('option');
+                            option.value = distributor.id;
+                            option.textContent = distributor.name;
+                            select.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => console.error('Error loading distributors:', error));
+        }
+
+        // Load branches
+        function loadBranches() {
+            fetch('/api/branches')
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('productBranch');
+                    select.innerHTML = '<option value="">Seleccionar sucursal</option>';
+                    
+                    if (data.content) {
+                        data.content.forEach(branch => {
+                            const option = document.createElement('option');
+                            option.value = branch.id;
+                            option.textContent = branch.name;
+                            select.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => console.error('Error loading branches:', error));
+        }
+
+        // Setup form validation
+        function setupFormValidation() {
+            const forms = document.querySelectorAll('.needs-validation');
+            Array.from(forms).forEach(form => {
+                form.addEventListener('submit', event => {
+                    if (!form.checkValidity()) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                    form.classList.add('was-validated');
+                }, false);
+            });
+        }
+
+        // Export functions
+        function exportPDF() {
+            window.open('/api/products/export/pdf', '_blank');
+        }
+
+        function exportExcel() {
+            window.open('/api/products/export/excel', '_blank');
+        }
+
+        // Show alert
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            const container = document.querySelector('.container-fluid');
+            container.insertBefore(alertDiv, container.firstChild);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

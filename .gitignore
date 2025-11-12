@@ -1,0 +1,36 @@
+# Node modules
+node_modules/
+package-lock.json
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment variables
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build files
+dist/
+build/
+
+# Java
+*.class
+target/
+*.jar
+*.war
+!.mvn/wrapper/maven-wrapper.jar
+
+# Temporary files
+*.tmp
+*.temp

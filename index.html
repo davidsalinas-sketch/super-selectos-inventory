@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="https://public-frontend-cos.metadl.com/mgx/img/favicon.png" type="image/png">
+    <title>Super Selectos - Sistema de Inventario</title>
+    <link rel="stylesheet" href="./style.css">
+    <!-- Leaflet (mapa) - corregido para cargar apropiadamente -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <!-- Fallback para Leaflet si el CDN principal falla -->
+    <script>
+        if (typeof L === 'undefined') {
+            console.warn('Loading Leaflet fallback...');
+            document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"><\/script>');
+            document.write('<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />');
+        }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.3/qrcode.min.js"></script>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-screen">
+        <div class="login-container">
+            <div class="login-header">
+                <img src="https://www.superselectos.com/img/super-selectos-banner.jpg" alt="Super Selectos Banner" class="login-banner">
+            </div>
+            <div class="login-form">
+                <h2>Iniciar Sesión</h2>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="username">Usuario</label>
+                        <input type="text" id="username" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Contraseña</label>
+                        <input type="password" id="password" name="password" required>
+                    </div>
+                    <button type="submit" class="btn-login">Entrar</button>
+                </form>
+                <div id="loginError" class="error-message"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard" class="dashboard hidden">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <img src="https://www.sermexelsalvador.com/wp-content/uploads/SUPERSELECTOS.png" alt="Super Selectos Logo" class="logo">
+                <nav class="nav-menu">
+                    <button id="inventoryBtn" class="nav-btn active">📦 Inventario</button>
+                    <button id="usersBtn" class="nav-btn">👥 Usuarios</button>
+                    <button id="distributorsBtn" class="nav-btn">🚚 Distribuidores</button>
+                    <button id="mapBtn" class="nav-btn">🗺️ Mapa</button>
+                </nav>
+                <div class="header-info">
+                    <span id="userInfo"></span>
+                    <button id="logoutBtn" class="btn-logout">Cerrar Sesión</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Inventory Section -->
+        <div id="inventorySection" class="section">
+            <main class="main-content">
+                <div class="toolbar">
+                    <h1>Gestión de Inventario</h1>
+                    <div class="toolbar-actions">
+                        <button id="addProductBtn" class="btn-primary">+ Agregar Producto</button>
+                        <button id="exportPdfBtn" class="btn-secondary">📄 Exportar PDF</button>
+                        <button id="shareBtn" class="btn-secondary">📤 Compartir</button>
+                    </div>
+                </div>
+
+                <!-- KPIs Section -->
+                <div class="kpi-section">
+                    <div class="kpi-card">
+                        <div class="kpi-value" id="kpi-total-products">0</div>
+                        <div class="kpi-label">Productos Totales</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value" id="kpi-stock-total">0</div>
+                        <div class="kpi-label">Stock Total</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value" id="kpi-valor-total">$0.00</div>
+                        <div class="kpi-label">Valor Total</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-value" id="kpi-ganancia-est">$0.00</div>
+                        <div class="kpi-label">Ganancia Estimada</div>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="filters">
+                    <input type="text" id="searchInput" placeholder="Buscar por nombre, código, categoría o distribuidor...">
+                    <select id="categoryFilter">
+                        <option value="">Todas las categorías</option>
+                        <option value="Alimentos">Alimentos</option>
+                        <option value="Bebidas">Bebidas</option>
+                        <option value="Carnes">Carnes</option>
+                        <option value="Frutas">Frutas</option>
+                        <option value="Limpieza">Limpieza</option>
+                        <option value="Juguetes">Juguetes</option>
+                        <option value="Otros">Otros</option>
+                    </select>
+                    <select id="sucursalFilter">
+                        <option value="all">Todas las sucursales</option>
+                    </select>
+                </div>
+
+                <!-- Products Table -->
+                <div class="table-container">
+                    <table id="productsTable">
+                        <thead>
+                            <tr>
+                                <th>Imagen</th>
+                                <th>Código</th>
+                                <th>Nombre</th>
+                                <th>Categoría</th>
+                                <th>Precio ($)</th>
+                                <th>Distribuidor</th>
+                                <th>Vencimiento</th>
+                                <th>Ganancia (%)</th>
+                                <th>Stock Total</th>
+                                <th>Sucursales</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productsTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </main>
+        </div>
+
+        <!-- Users Section -->
+        <div id="usersSection" class="section hidden">
+            <main class="main-content">
+                <div class="toolbar">
+                    <h1>Gestión de Usuarios</h1>
+                    <div class="toolbar-actions">
+                        <button id="addUserBtn" class="btn-primary">+ Agregar Usuario</button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Usuario</th>
+                                <th>Nombre Completo</th>
+                                <th>Email</th>
+                                <th>Rol</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </main>
+        </div>
+
+        <!-- Distributors Section -->
+        <div id="distributorsSection" class="section hidden">
+            <main class="main-content">
+                <div class="toolbar">
+                    <h1>Gestión de Distribuidores</h1>
+                    <div class="toolbar-actions">
+                        <button id="addDistributorBtn" class="btn-primary">+ Agregar Distribuidor</button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>Contacto</th>
+                                <th>Teléfono</th>
+                                <th>Email</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="distributorsTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </main>
+        </div>
+
+        <!-- Map Section -->
+        <div id="mapSection" class="section hidden">
+            <main class="main-content">
+                <div class="toolbar">
+                    <h1>BUSCA TU SALA DE VENTA FAVORITA</h1>
+                </div>
+
+                <div class="map-panel">
+                    <aside class="map-sidebar">
+                        <label for="mapSearchInput" class="map-search-label">Sucursal</label>
+                        <input id="mapSearchInput" type="text" placeholder="Buscar por nombre de sucursal...">
+                        <div id="mapResults" class="map-results">
+                            <!-- Result items injected here -->
+                        </div>
+                    </aside>
+                    <section class="map-container">
+                        <div id="map" style="width:100%;height:600px;border-radius:8px;border:1px solid #e6e6e6"></div>
+                        <div class="map-note">(Mapa centrado en El Salvador — funciona en línea. Para uso offline, descargue Leaflet y los tiles OSM localmente.)</div>
+                    </section>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Product Modal -->
+    <div id="productModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Agregar Producto</h2>
+                <span class="close">&times;</span>
+            </div>
+            <form id="productForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="productCode">Código</label>
+                        <input type="text" id="productCode" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="productName">Nombre</label>
+                        <input type="text" id="productName" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="productCategory">Categoría</label>
+                        <select id="productCategory" required>
+                            <option value="">Seleccionar categoría</option>
+                            <option value="Alimentos">Alimentos</option>
+                            <option value="Bebidas">Bebidas</option>
+                            <option value="Carnes">Carnes</option>
+                            <option value="Frutas">Frutas</option>
+                            <option value="Limpieza">Limpieza</option>
+                            <option value="Juguetes">Juguetes</option>
+                            <option value="Otros">Otros</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="productPrice">Precio ($)</label>
+                        <input type="number" id="productPrice" step="0.01" min="0" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="productDistributor">Distribuidor</label>
+                        <select id="productDistributor">
+                            <option value="">Seleccionar distribuidor</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="productExpiration">Fecha de Vencimiento</label>
+                        <input type="date" id="productExpiration" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="productImage">URL de Imagen</label>
+                        <input type="url" id="productImage" placeholder="https://ejemplo.com/imagen.jpg">
+                    </div>
+                    <div class="form-group">
+                        <label for="productProfit">Ganancia (%)</label>
+                        <input type="number" id="productProfit" min="0" max="100" step="0.1" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Distribución por Sucursales</label>
+                    <div id="sucursalesContainer" class="sucursales-grid">
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel">Cancelar</button>
+                    <button type="submit" class="btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- User Modal -->
+    <div id="userModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="userModalTitle">Agregar Usuario</h2>
+                <span class="close">&times;</span>
+            </div>
+            <form id="userForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="userName">Nombre de Usuario</label>
+                        <input type="text" id="userName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="userFullName">Nombre Completo</label>
+                        <input type="text" id="userFullName" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="userEmail">Email</label>
+                        <input type="email" id="userEmail" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="userRole">Rol</label>
+                        <select id="userRole" required>
+                            <option value="">Seleccionar rol</option>
+                            <option value="Administrador">Administrador</option>
+                            <option value="Gerente">Gerente</option>
+                            <option value="Empleado">Empleado</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="userPassword">Contraseña</label>
+                    <input type="password" id="userPassword" required>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel">Cancelar</button>
+                    <button type="submit" class="btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Distributor Modal -->
+    <div id="distributorModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="distributorModalTitle">Agregar Distribuidor</h2>
+                <span class="close">&times;</span>
+            </div>
+            <form id="distributorForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="distributorName">Nombre de la Empresa</label>
+                        <input type="text" id="distributorName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="distributorContact">Persona de Contacto</label>
+                        <input type="text" id="distributorContact" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="distributorPhone">Teléfono</label>
+                        <input type="tel" id="distributorPhone" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="distributorEmail">Email</label>
+                        <input type="email" id="distributorEmail" required>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel">Cancelar</button>
+                    <button type="submit" class="btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Share Modal -->
+    <div id="shareModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Compartir Reporte</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="share-options">
+                <div class="share-option">
+                    <h3>📧 Enviar por Gmail</h3>
+                    <p><strong>🚀 Envío Automático:</strong> Ingresa el email y el PDF se enviará automáticamente con mensaje incluido.</p>
+                    <input type="email" id="emailInput" placeholder="destinatario@gmail.com" required>
+                    <button id="sendEmailBtn" class="btn-primary">🚀 Enviar Automáticamente</button>
+                </div>
+                <div class="share-option">
+                    <h3>📱 Compartir por WhatsApp</h3>
+                    <p><strong>🚀 Envío Automático:</strong> Ingresa el número y el PDF se enviará automáticamente con mensaje incluido.</p>
+                    <input type="tel" id="phoneInput" placeholder="+503 1234-5678" required>
+                    <button id="sendWhatsAppBtn" class="btn-primary">🚀 Enviar Automáticamente</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notifications -->
+    <div id="notifications" class="notifications"></div>
+
+    <!-- Página posterior con logo para PDF -->
+    <section class="back-page" style="display: none;">
+        <img src="https://www.superselectos.com/img/super-selectos-banner.jpg" alt="Super Selectos" style="max-width:400px; width:60%;">
+    </section>
+
+    <script src="./script.js"></script>
+</body>
+</html> 

@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <!-- This fragment file contains reusable components -->
+</head>
+<body>
+    <!-- Navigation Fragment -->
+    <nav th:fragment="navbar" class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <!-- Logo -->
+            <a class="navbar-brand fw-bold" th:href="@{/dashboard}">
+                <i class="fas fa-shopping-cart"></i>
+                Super Selectos
+            </a>
+
+            <!-- Mobile Toggle -->
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <!-- Navigation Menu -->
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/dashboard}" 
+                           th:classappend="${#request.requestURI == '/dashboard' ? 'active' : ''}">
+                            <i class="fas fa-tachometer-alt"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/products}" 
+                           th:classappend="${#request.requestURI.startsWith('/products') ? 'active' : ''}">
+                            <i class="fas fa-box"></i> Productos
+                        </a>
+                    </li>
+                    <li class="nav-item" sec:authorize="hasAnyRole('ADMIN')">
+                        <a class="nav-link" th:href="@{/users}" 
+                           th:classappend="${#request.requestURI.startsWith('/users') ? 'active' : ''}">
+                            <i class="fas fa-users"></i> Usuarios
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/distributors}" 
+                           th:classappend="${#request.requestURI.startsWith('/distributors') ? 'active' : ''}">
+                            <i class="fas fa-truck"></i> Distribuidores
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/branches}" 
+                           th:classappend="${#request.requestURI.startsWith('/branches') ? 'active' : ''}">
+                            <i class="fas fa-store"></i> Sucursales
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/reports}" 
+                           th:classappend="${#request.requestURI.startsWith('/reports') ? 'active' : ''}">
+                            <i class="fas fa-chart-bar"></i> Reportes
+                        </a>
+                    </li>
+                </ul>
+
+                <!-- User Menu -->
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle"></i>
+                            <span sec:authentication="name">Usuario</span>
+                            <span class="badge bg-success ms-1" 
+                                  th:text="${#authentication.authorities[0].authority.replace('ROLE_', '')}">ROLE</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <a class="dropdown-item" th:href="@{/profile}">
+                                    <i class="fas fa-user"></i> Mi Perfil
+                                </a>
+                            </li>
+                            <li sec:authorize="hasAnyRole('ADMIN')">
+                                <a class="dropdown-item" th:href="@{/settings}">
+                                    <i class="fas fa-cog"></i> Configuración
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form th:action="@{/logout}" method="post" class="d-inline">
+                                    <button type="submit" class="dropdown-item text-danger">
+                                        <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb Fragment -->
+    <nav th:fragment="breadcrumb(items)" aria-label="breadcrumb" class="mt-3 mb-4">
+        <div class="container-fluid">
+            <ol class="breadcrumb bg-white p-3 rounded shadow-sm">
+                <li class="breadcrumb-item">
+                    <a th:href="@{/dashboard}" class="text-decoration-none">
+                        <i class="fas fa-home"></i> Inicio
+                    </a>
+                </li>
+                <th:block th:each="item : ${items}">
+                    <li class="breadcrumb-item" 
+                        th:classappend="${item.active} ? 'active' : ''"
+                        th:aria-current="${item.active} ? 'page' : null">
+                        <a th:if="${!item.active}" 
+                           th:href="${item.url}" 
+                           th:text="${item.text}"
+                           class="text-decoration-none"></a>
+                        <span th:if="${item.active}" th:text="${item.text}"></span>
+                    </li>
+                </th:block>
+            </ol>
+        </div>
+    </nav>
+
+    <!-- Page Header Fragment -->
+    <div th:fragment="pageHeader(title, subtitle, icon, actions)" class="row mb-4">
+        <div class="col-12">
+            <div class="card border-left-primary shadow">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h1 class="h3 mb-0 text-gray-800">
+                                <i th:class="${'fas fa-' + icon + ' text-primary'}"></i>
+                                <span th:text="${title}">Título</span>
+                            </h1>
+                            <p class="mb-0 text-muted" th:text="${subtitle}">Subtítulo</p>
+                        </div>
+                        <div th:if="${actions}" th:utext="${actions}">
+                            <!-- Action buttons will be inserted here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Spinner Fragment -->
+    <div th:fragment="loadingSpinner(id, message)" th:id="${id}" class="text-center py-4">
+        <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
+        <p class="text-muted mt-2" th:text="${message ?: 'Cargando...'}">Cargando...</p>
+    </div>
+
+    <!-- No Results Fragment -->
+    <div th:fragment="noResults(id, message, icon)" th:id="${id}" class="text-center py-4 d-none">
+        <i th:class="${'fas fa-' + (icon ?: 'search') + ' fa-2x text-muted'}"></i>
+        <p class="text-muted mt-2" th:text="${message ?: 'No se encontraron resultados'}">No se encontraron resultados</p>
+    </div>
+
+    <!-- Alert Fragment -->
+    <div th:fragment="alert(type, message, dismissible)" 
+         th:class="${'alert alert-' + type + (dismissible ? ' alert-dismissible fade show' : '')}"
+         role="alert">
+        <span th:text="${message}">Mensaje de alerta</span>
+        <button th:if="${dismissible}" 
+                type="button" 
+                class="btn-close" 
+                data-bs-dismiss="alert" 
+                aria-label="Close"></button>
+    </div>
+
+    <!-- Modal Header Fragment -->
+    <div th:fragment="modalHeader(title, icon, color)" th:class="${'modal-header bg-' + (color ?: 'primary') + ' text-white'}">
+        <h5 class="modal-title">
+            <i th:class="${'fas fa-' + (icon ?: 'edit')}"></i>
+            <span th:text="${title}">Título del Modal</span>
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+    </div>
+
+    <!-- Form Field Fragment -->
+    <div th:fragment="formField(id, label, type, required, placeholder, help)" class="mb-3">
+        <label th:for="${id}" class="form-label">
+            <span th:text="${label}">Label</span>
+            <span th:if="${required}" class="text-danger">*</span>
+        </label>
+        <input th:id="${id}" 
+               th:name="${id}" 
+               th:type="${type ?: 'text'}" 
+               class="form-control"
+               th:required="${required}"
+               th:placeholder="${placeholder}">
+        <div th:if="${help}" class="form-text" th:text="${help}"></div>
+        <div class="invalid-feedback">
+            Este campo es requerido.
+        </div>
+    </div>
+
+    <!-- Select Field Fragment -->
+    <div th:fragment="selectField(id, label, required, options, placeholder)" class="mb-3">
+        <label th:for="${id}" class="form-label">
+            <span th:text="${label}">Label</span>
+            <span th:if="${required}" class="text-danger">*</span>
+        </label>
+        <select th:id="${id}" th:name="${id}" class="form-select" th:required="${required}">
+            <option value="" th:text="${placeholder ?: 'Seleccionar...'}">Seleccionar...</option>
+            <th:block th:each="option : ${options}">
+                <option th:value="${option.value}" th:text="${option.text}">Opción</option>
+            </th:block>
+        </select>
+        <div class="invalid-feedback">
+            Este campo es requerido.
+        </div>
+    </div>
+
+    <!-- Action Buttons Fragment -->
+    <div th:fragment="actionButtons(entity, editPermission, deletePermission)">
+        <button class="btn btn-info btn-sm me-1" 
+                th:onclick="${'view' + entity + '(' + entity.toLowerCase() + '.id)'}" 
+                title="Ver">
+            <i class="fas fa-eye"></i>
+        </button>
+        <button th:if="${editPermission}" 
+                class="btn btn-warning btn-sm me-1" 
+                th:onclick="${'edit' + entity + '(' + entity.toLowerCase() + '.id)'}" 
+                title="Editar">
+            <i class="fas fa-edit"></i>
+        </button>
+        <button th:if="${deletePermission}" 
+                class="btn btn-danger btn-sm" 
+                th:onclick="${'delete' + entity + '(' + entity.toLowerCase() + '.id, \'' + entity.toLowerCase() + '.name + '\')'}" 
+                title="Eliminar">
+            <i class="fas fa-trash"></i>
+        </button>
+    </div>
+
+    <!-- Statistics Card Fragment -->
+    <div th:fragment="statsCard(title, value, icon, color, link)" class="col-xl-3 col-md-6 mb-4">
+        <div th:class="${'card border-left-' + (color ?: 'primary') + ' shadow h-100 py-2'}">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div th:class="${'text-xs font-weight-bold text-' + (color ?: 'primary') + ' text-uppercase mb-1'}"
+                             th:text="${title}">
+                            Título
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800" th:text="${value}">
+                            Valor
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i th:class="${'fas fa-' + (icon ?: 'chart-bar') + ' fa-2x text-gray-300'}"></i>
+                    </div>
+                </div>
+                <a th:if="${link}" th:href="${link}" class="stretched-link"></a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer Fragment -->
+    <footer th:fragment="footer" class="sticky-footer bg-white mt-5">
+        <div class="container my-auto">
+            <div class="copyright text-center my-auto">
+                <span>© 2024 <strong>Super Selectos</strong> - Sistema de Inventario. Todos los derechos reservados.</span>
+            </div>
+            <div class="text-center mt-2">
+                <small class="text-muted">
+                    Desarrollado con <i class="fas fa-heart text-danger"></i> usando 
+                    <strong>Spring Boot</strong> + <strong>Thymeleaf</strong>
+                </small>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

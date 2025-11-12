@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Super Selectos</title>
+    
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom CSS -->
+    <link th:href="@{/css/dashboard.css}" href="/css/dashboard.css" rel="stylesheet">
+</head>
+<body class="dashboard-body">
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <!-- Logo -->
+            <a class="navbar-brand fw-bold" th:href="@{/dashboard}">
+                <i class="fas fa-shopping-cart"></i>
+                Super Selectos
+            </a>
+
+            <!-- Mobile Toggle -->
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <!-- Navigation Menu -->
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" th:href="@{/dashboard}">
+                            <i class="fas fa-tachometer-alt"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/products}">
+                            <i class="fas fa-box"></i> Productos
+                        </a>
+                    </li>
+                    <li class="nav-item" sec:authorize="hasAnyRole('ADMIN')">
+                        <a class="nav-link" th:href="@{/users}">
+                            <i class="fas fa-users"></i> Usuarios
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/distributors}">
+                            <i class="fas fa-truck"></i> Distribuidores
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/branches}">
+                            <i class="fas fa-store"></i> Sucursales
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/reports}">
+                            <i class="fas fa-chart-bar"></i> Reportes
+                        </a>
+                    </li>
+                </ul>
+
+                <!-- User Menu -->
+                <ul class="navbar-nav">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle"></i>
+                            <span sec:authentication="name">Usuario</span>
+                            <span class="badge bg-success ms-1" sec:authentication="principal.authorities">ROLE</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <a class="dropdown-item" href="#">
+                                    <i class="fas fa-user"></i> Mi Perfil
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="#">
+                                    <i class="fas fa-cog"></i> Configuración
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form th:action="@{/logout}" method="post" class="d-inline">
+                                    <button type="submit" class="dropdown-item text-danger">
+                                        <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid mt-4">
+        <!-- Welcome Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="welcome-card bg-gradient-primary text-white rounded p-4">
+                    <h2 class="mb-2">
+                        <i class="fas fa-sun"></i>
+                        ¡Bienvenido, <span sec:authentication="name">Usuario</span>!
+                    </h2>
+                    <p class="mb-0">
+                        <i class="fas fa-clock"></i>
+                        <span id="currentDateTime"></span>
+                    </p>
+                    <p class="mb-0">
+                        <i class="fas fa-shield-alt"></i>
+                        Rol actual: <span class="badge bg-light text-dark" sec:authentication="principal.authorities">ROLE</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <!-- Total Products -->
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-primary shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                    Total Productos
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="totalProducts">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-box fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Low Stock Products -->
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-warning shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                    Stock Bajo
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="lowStockProducts">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total Value -->
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-info shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                    Valor Total Inventario
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="totalValue">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Users -->
+            <div class="col-xl-3 col-md-6 mb-4" sec:authorize="hasAnyRole('ADMIN', 'MANAGER')">
+                <div class="card border-left-success shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                    Usuarios Activos
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="activeUsers">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-users fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row mb-4">
+            <!-- Products by Category Chart -->
+            <div class="col-xl-8 col-lg-7">
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-chart-pie"></i>
+                            Productos por Categoría
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="categoryChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stock Status Pie Chart -->
+            <div class="col-xl-4 col-lg-5">
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-chart-doughnut"></i>
+                            Estado del Stock
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="stockChart" width="400" height="400"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activities & Low Stock -->
+        <div class="row">
+            <!-- Recent Products -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-clock"></i>
+                            Productos Recientes
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div id="recentProducts">
+                            <div class="text-center">
+                                <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                                <p class="text-muted mt-2">Cargando productos recientes...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Low Stock Alert -->
+            <div class="col-lg-6 mb-4">
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3 bg-warning text-dark">
+                        <h6 class="m-0 font-weight-bold">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Productos con Stock Bajo
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div id="lowStockAlert">
+                            <div class="text-center">
+                                <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                                <p class="text-muted mt-2">Verificando niveles de stock...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">
+                            <i class="fas fa-bolt"></i>
+                            Acciones Rápidas
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-md-3 mb-3" sec:authorize="hasAnyRole('ADMIN', 'MANAGER')">
+                                <a th:href="@{/products/new}" class="btn btn-success btn-lg w-100">
+                                    <i class="fas fa-plus-circle fa-2x d-block mb-2"></i>
+                                    Nuevo Producto
+                                </a>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <a th:href="@{/reports/inventory}" class="btn btn-info btn-lg w-100">
+                                    <i class="fas fa-file-pdf fa-2x d-block mb-2"></i>
+                                    Reporte PDF
+                                </a>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <a th:href="@{/products?filter=lowstock}" class="btn btn-warning btn-lg w-100">
+                                    <i class="fas fa-search fa-2x d-block mb-2"></i>
+                                    Ver Stock Bajo
+                                </a>
+                            </div>
+                            <div class="col-md-3 mb-3" sec:authorize="hasAnyRole('ADMIN')">
+                                <a th:href="@{/users/new}" class="btn btn-primary btn-lg w-100">
+                                    <i class="fas fa-user-plus fa-2x d-block mb-2"></i>
+                                    Nuevo Usuario
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Dashboard JS -->
+    <script th:src="@{/js/dashboard.js}"></script>
+    
+    <script>
+        // Update current date/time
+        function updateDateTime() {
+            const now = new Date();
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            document.getElementById('currentDateTime').textContent = 
+                now.toLocaleDateString('es-ES', options);
+        }
+
+        // Update every minute
+        updateDateTime();
+        setInterval(updateDateTime, 60000);
+
+        // Load dashboard data
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDashboardStats();
+            loadCharts();
+            loadRecentProducts();
+            loadLowStockProducts();
+        });
+
+        // Load statistics
+        function loadDashboardStats() {
+            fetch('/api/products/stats')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('totalProducts').textContent = data.totalProducts || 0;
+                    document.getElementById('lowStockProducts').textContent = data.lowStockProducts || 0;
+                    document.getElementById('totalValue').textContent = '$' + (data.totalValue || 0).toLocaleString();
+                })
+                .catch(() => {
+                    document.getElementById('totalProducts').textContent = '0';
+                    document.getElementById('lowStockProducts').textContent = '0';
+                    document.getElementById('totalValue').textContent = '$0';
+                });
+        }
+
+        // Load charts
+        function loadCharts() {
+            // Category Chart
+            const ctx1 = document.getElementById('categoryChart').getContext('2d');
+            new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: ['Electrónicos', 'Ropa', 'Hogar', 'Deportes', 'Libros'],
+                    datasets: [{
+                        label: 'Productos',
+                        data: [12, 19, 3, 5, 2],
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.8)',
+                            'rgba(54, 162, 235, 0.8)',
+                            'rgba(255, 205, 86, 0.8)',
+                            'rgba(75, 192, 192, 0.8)',
+                            'rgba(153, 102, 255, 0.8)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+
+            // Stock Chart
+            const ctx2 = document.getElementById('stockChart').getContext('2d');
+            new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Stock Normal', 'Stock Bajo', 'Sin Stock'],
+                    datasets: [{
+                        data: [70, 20, 10],
+                        backgroundColor: [
+                            'rgba(40, 167, 69, 0.8)',
+                            'rgba(255, 193, 7, 0.8)',
+                            'rgba(220, 53, 69, 0.8)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        }
+
+        // Load recent products
+        function loadRecentProducts() {
+            fetch('/api/products?page=0&size=5&sort=createdAt,desc')
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('recentProducts');
+                    if (data.content && data.content.length > 0) {
+                        container.innerHTML = data.content.map(product => `
+                            <div class="d-flex align-items-center mb-2 p-2 border-bottom">
+                                <div class="flex-grow-1">
+                                    <strong>${product.name}</strong><br>
+                                    <small class="text-muted">${product.code} - Stock: ${product.stock}</small>
+                                </div>
+                                <span class="badge bg-primary">$${product.price}</span>
+                            </div>
+                        `).join('');
+                    } else {
+                        container.innerHTML = '<p class="text-muted text-center">No hay productos recientes</p>';
+                    }
+                })
+                .catch(() => {
+                    document.getElementById('recentProducts').innerHTML = 
+                        '<p class="text-muted text-center">Error al cargar productos</p>';
+                });
+        }
+
+        // Load low stock products
+        function loadLowStockProducts() {
+            fetch('/api/products/low-stock?limit=5')
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('lowStockAlert');
+                    if (data && data.length > 0) {
+                        container.innerHTML = data.map(product => `
+                            <div class="alert alert-warning py-2 mb-2">
+                                <strong>${product.name}</strong><br>
+                                <small>Stock actual: ${product.stock} | Mínimo: ${product.minimumStock}</small>
+                            </div>
+                        `).join('');
+                    } else {
+                        container.innerHTML = '<p class="text-success text-center"><i class="fas fa-check"></i> Todos los productos tienen stock suficiente</p>';
+                    }
+                })
+                .catch(() => {
+                    document.getElementById('lowStockAlert').innerHTML = 
+                        '<p class="text-muted text-center">Error al verificar stock</p>';
+                });
+        }
+    </script>
+</body>
+</html>
