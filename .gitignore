@@ -39,3 +39,7 @@ target/
 lamp/
 SELECT22/
 logs/
+
+# Archivos generados
+*.docx
+*.pdf
