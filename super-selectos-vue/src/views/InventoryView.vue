@@ -228,12 +228,12 @@ function deleteProduct(codigo) {
 
 function exportPDF() {
   notificationStore.show('Generando PDF...', 'info')
-  // TODO: Implementar exportación PDF
+  // Implementar integración con jsPDF cuando esté lista
 }
 
 function shareReport() {
   notificationStore.show('Funcionalidad de compartir próximamente', 'info')
-  // TODO: Implementar compartir
+  // Implementar Web Share API cuando esté lista
 }
 </script>
 

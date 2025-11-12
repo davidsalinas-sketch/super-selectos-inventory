@@ -52,7 +52,6 @@ class InventorySystem {
                 
             if (cleanText !== originalText && cleanText.length > 0) {
                 el.textContent = cleanText;
-                console.log('Texto limpiado:', originalText, '->', cleanText);
             }
         });
         
@@ -1325,9 +1324,6 @@ class InventorySystem {
                     stockData = product.sucursales?.[branchKey] || 0;
                     sucursalesData = stockData > 0 ? `Disp: ${stockData}` : 'Sin stock';
                 }
-                
-                // Debug: Verificar que los datos están disponibles
-                console.log(`Producto ${index}: categoria="${product.categoria}", distributor="${product.distributor}"`);
                 
                 const rowData = [
                     product.codigo || 'N/A',

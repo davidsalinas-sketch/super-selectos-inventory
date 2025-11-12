@@ -34,3 +34,8 @@ target/
 # Temporary files
 *.tmp
 *.temp
+
+# Carpetas de prueba
+lamp/
+SELECT22/
+logs/
